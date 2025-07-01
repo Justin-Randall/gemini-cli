@@ -18,6 +18,7 @@ import {
   DEFAULT_GEMINI_EMBEDDING_MODEL,
   FileDiscoveryService,
   TelemetryTarget,
+  AuthType,
 } from '@google/gemini-cli-core';
 import { Settings } from './settings.js';
 
@@ -49,10 +50,11 @@ interface CliArgs {
   show_memory_usage: boolean | undefined;
   yolo: boolean | undefined;
   telemetry: boolean | undefined;
-  checkpointing: boolean | undefined;
   telemetryTarget: string | undefined;
   telemetryOtlpEndpoint: string | undefined;
   telemetryLogPrompts: boolean | undefined;
+  authType: AuthType | undefined;
+  checkpointing: boolean | undefined;
 }
 
 async function parseArguments(): Promise<CliArgs> {
@@ -121,6 +123,16 @@ async function parseArguments(): Promise<CliArgs> {
       type: 'boolean',
       description:
         'Enable or disable logging of user prompts for telemetry. Overrides settings files.',
+    })
+    .option('telemetry-log-prompts', {
+      type: 'boolean',
+      description:
+        'Enable or disable logging of user prompts for telemetry. Overrides settings files.',
+    })
+    .option('auth-type', {
+      type: 'string',
+      choices: Object.values(AuthType),
+      description: 'Authentication type to use.',
     })
     .option('checkpointing', {
       alias: 'c',
@@ -197,7 +209,7 @@ export async function loadCliConfig(
 
   const sandboxConfig = await loadSandboxConfig(settings, argv);
 
-  return new Config({
+  const configParams = {
     sessionId,
     embeddingModel: DEFAULT_GEMINI_EMBEDDING_MODEL,
     sandbox: sandboxConfig,
@@ -245,7 +257,11 @@ export async function loadCliConfig(
     bugCommand: settings.bugCommand,
     model: argv.model!,
     extensionContextFilePaths,
-  });
+    authType: argv.authType || settings.selectedAuthType,
+  };
+  const config = new Config(configParams);
+  await config.initialize(configParams);
+  return config;
 }
 
 function mergeMcpServers(settings: Settings, extensions: Extension[]) {

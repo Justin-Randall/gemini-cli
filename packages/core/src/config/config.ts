@@ -130,6 +130,7 @@ export interface ConfigParameters {
   bugCommand?: BugCommandSettings;
   model: string;
   extensionContextFilePaths?: string[];
+  authType?: AuthType;
 }
 
 export class Config {
@@ -168,6 +169,7 @@ export class Config {
   private readonly bugCommand: BugCommandSettings | undefined;
   private readonly model: string;
   private readonly extensionContextFilePaths: string[];
+  private readonly authType: AuthType | undefined;
   private modelSwitchedDuringSession: boolean = false;
   flashFallbackHandler?: FlashFallbackHandler;
 
@@ -211,6 +213,18 @@ export class Config {
     this.bugCommand = params.bugCommand;
     this.model = params.model;
     this.extensionContextFilePaths = params.extensionContextFilePaths ?? [];
+    this.authType = params.authType;
+
+    // Initialize contentGeneratorConfig here
+    this.contentGeneratorConfig = undefined!;
+  }
+
+  async initialize(params: ConfigParameters) {
+    this.contentGeneratorConfig = await createContentGeneratorConfig(
+      this.model,
+      this.authType,
+      this,
+    );
 
     if (params.contextFileName) {
       setGeminiMdFilename(params.contextFileName);
@@ -443,6 +457,10 @@ export class Config {
 
   getExtensionContextFilePaths(): string[] {
     return this.extensionContextFilePaths;
+  }
+
+  getAuthType(): AuthType | undefined {
+    return this.authType;
   }
 
   async getGitService(): Promise<GitService> {

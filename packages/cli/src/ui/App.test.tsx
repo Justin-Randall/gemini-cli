@@ -128,6 +128,7 @@ vi.mock('@google/gemini-cli-core', async (importOriginal) => {
         getCheckpointingEnabled: vi.fn(() => opts.checkpointing ?? true),
         getAllGeminiMdFilenames: vi.fn(() => ['GEMINI.md']),
         setFlashFallbackHandler: vi.fn(),
+        getAuthType: vi.fn(() => opts.authType),
       };
     });
   return {

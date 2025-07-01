@@ -155,7 +155,7 @@ const App = ({ config, settings, startupWarnings = [] }: AppProps) => {
     handleAuthSelect,
     isAuthenticating,
     cancelAuthentication,
-  } = useAuthCommand(settings, setAuthError, config);
+  } = useAuthCommand(settings, setAuthError, config, config.getAuthType());
 
   useEffect(() => {
     if (settings.merged.selectedAuthType) {

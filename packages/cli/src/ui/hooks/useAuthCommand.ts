@@ -17,6 +17,7 @@ export const useAuthCommand = (
   settings: LoadedSettings,
   setAuthError: (error: string | null) => void,
   config: Config,
+  cliAuthType: AuthType | undefined,
 ) => {
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(
     settings.merged.selectedAuthType === undefined,
@@ -30,7 +31,7 @@ export const useAuthCommand = (
 
   useEffect(() => {
     const authFlow = async () => {
-      const authType = settings.merged.selectedAuthType;
+      const authType = cliAuthType || settings.merged.selectedAuthType;
       if (isAuthDialogOpen || !authType) {
         return;
       }
@@ -48,7 +49,14 @@ export const useAuthCommand = (
     };
 
     void authFlow();
-  }, [isAuthDialogOpen, settings, config, setAuthError, openAuthDialog]);
+  }, [
+    isAuthDialogOpen,
+    settings,
+    config,
+    setAuthError,
+    openAuthDialog,
+    cliAuthType,
+  ]);
 
   const handleAuthSelect = useCallback(
     async (authType: AuthType | undefined, scope: SettingScope) => {

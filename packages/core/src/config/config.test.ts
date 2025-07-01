@@ -140,13 +140,14 @@ describe('Server Config (config.ts)', () => {
     expect(config.getUserMemory()).toBe('');
   });
 
-  it('Config constructor should call setGeminiMdFilename with contextFileName if provided', () => {
+  it('Config constructor should call setGeminiMdFilename with contextFileName if provided', async () => {
     const contextFileName = 'CUSTOM_AGENTS.md';
     const paramsWithContextFile: ConfigParameters = {
       ...baseParams,
       contextFileName,
     };
-    new Config(paramsWithContextFile);
+    const config = new Config(paramsWithContextFile);
+    await config.initialize(paramsWithContextFile);
     expect(mockSetGeminiMdFilename).toHaveBeenCalledWith(contextFileName);
   });
 

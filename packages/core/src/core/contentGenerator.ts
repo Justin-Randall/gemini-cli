@@ -15,6 +15,7 @@ import {
 } from '@google/genai';
 import { createCodeAssistContentGenerator } from '../code_assist/codeAssist.js';
 import { DEFAULT_GEMINI_MODEL } from '../config/models.js';
+import { OllamaClient } from './ollamaClient.js';
 import { getEffectiveModel } from './modelCheck.js';
 
 /**
@@ -38,6 +39,7 @@ export enum AuthType {
   LOGIN_WITH_GOOGLE = 'oauth-personal',
   USE_GEMINI = 'gemini-api-key',
   USE_VERTEX_AI = 'vertex-ai',
+  SELF_HOSTED = 'self-hosted',
 }
 
 export type ContentGeneratorConfig = {
@@ -45,6 +47,7 @@ export type ContentGeneratorConfig = {
   apiKey?: string;
   vertexai?: boolean;
   authType?: AuthType | undefined;
+  ollamaUrl?: string;
 };
 
 export async function createContentGeneratorConfig(
@@ -96,6 +99,11 @@ export async function createContentGeneratorConfig(
     return contentGeneratorConfig;
   }
 
+  if (authType === AuthType.SELF_HOSTED) {
+    contentGeneratorConfig.ollamaUrl = process.env.OLLAMA_URL;
+    return contentGeneratorConfig;
+  }
+
   return contentGeneratorConfig;
 }
 
@@ -123,6 +131,15 @@ export async function createContentGenerator(
     });
 
     return googleGenAI.models;
+  }
+
+  if (config.authType === AuthType.SELF_HOSTED) {
+    if (!config.ollamaUrl) {
+      throw new Error(
+        'Ollama URL not provided for self-hosted authentication.',
+      );
+    }
+    return new OllamaClient(config.ollamaUrl);
   }
 
   throw new Error(
