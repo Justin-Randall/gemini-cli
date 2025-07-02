@@ -15,8 +15,8 @@ import {
 } from '@google/genai';
 import { ContentGenerator } from './contentGenerator.js';
 
-export class OllamaClient implements ContentGenerator {
-  constructor(private ollamaUrl: string) { }
+export class OllamaContentGenerator implements ContentGenerator {
+  constructor(private ollamaUrl: string) {}
 
   async generateContent(
     request: GenerateContentParameters,

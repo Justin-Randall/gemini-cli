@@ -15,7 +15,7 @@ import {
 } from '@google/genai';
 import { createCodeAssistContentGenerator } from '../code_assist/codeAssist.js';
 import { DEFAULT_GEMINI_MODEL } from '../config/models.js';
-import { OllamaClient } from './ollamaClient.js';
+import { OllamaContentGenerator } from './ollamaContentGenerator.js';
 import { getEffectiveModel } from './modelCheck.js';
 
 /**
@@ -139,7 +139,7 @@ export async function createContentGenerator(
         'Ollama URL not provided for self-hosted authentication.',
       );
     }
-    return new OllamaClient(config.ollamaUrl);
+    return new OllamaContentGenerator(config.ollamaUrl);
   }
 
   throw new Error(
