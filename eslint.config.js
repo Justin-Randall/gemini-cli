@@ -155,13 +155,25 @@ export default tseslint.config(
     },
   },
   {
-    // second override: turn it off for ollamaClient.ts
+    // Override for ollamaContentGenerator.ts
+    // It is a wholly original work by Justin Randall and Playscale PTE LTD
     files: ['**/ollamaContentGenerator.ts'],
-    rules: {
-      'license-header/header': 'off',
+    plugins: {
+      'license-header': licenseHeader,
     },
-  },
-
+    rules: {
+      'license-header/header': [
+        'error',
+        [
+          '/**',
+          ' * @license',
+          ' * Copyright 2025 Justin Randall and Playscale PTE LTD',
+          ' * SPDX-License-Identifier: Apache-2.0',
+          ' */',
+        ],
+      ],
+    },
+  }
   // extra settings for scripts that we run directly with node
   {
     files: ['./scripts/**/*.js', 'esbuild.config.js'],
