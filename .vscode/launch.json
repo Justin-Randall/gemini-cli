@@ -25,8 +25,7 @@
       "console": "integratedTerminal",
       "env": {
         "GEMINI_SANDBOX": "false",
-        "OLLAMA_URL": "http://192.168.0.31:11434",
-        "AUTH_TYPE": "self-hosted"
+        "OLLAMA_URL": "http://192.168.0.31:11434"
       }
     },
     {

@@ -16,7 +16,7 @@ import {
 import { ContentGenerator } from './contentGenerator.js';
 
 export class OllamaClient implements ContentGenerator {
-  constructor(private ollamaUrl: string) {}
+  constructor(private ollamaUrl: string) { }
 
   async generateContent(
     request: GenerateContentParameters,
@@ -112,10 +112,11 @@ export class OllamaClient implements ContentGenerator {
 
     async function* generate() {
       let buffer = '';
-      while (true) {
+      let finished = false;
+      while (!finished) {
         const { done, value } = await reader.read();
         if (done) {
-          break;
+          return;
         }
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
@@ -124,11 +125,18 @@ export class OllamaClient implements ContentGenerator {
         for (const line of lines) {
           if (line.trim() === '') continue;
           const parsed = JSON.parse(line);
+
+          if (parsed.done) {
+            finished = true;
+            return;
+          }
+
           const generatedText = parsed.response;
           yield {
             candidates: [
               {
                 content: {
+                  role: 'model',
                   parts: [{ text: generatedText }],
                 },
               },
