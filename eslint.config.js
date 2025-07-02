@@ -154,6 +154,14 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // second override: turn it off for ollamaClient.ts
+    files: ['**/ollamaContentGenerator.ts'],
+    rules: {
+      'license-header/header': 'off',
+    },
+  },
+
   // extra settings for scripts that we run directly with node
   {
     files: ['./scripts/**/*.js', 'esbuild.config.js'],
