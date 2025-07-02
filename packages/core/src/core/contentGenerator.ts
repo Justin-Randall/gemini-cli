@@ -139,7 +139,7 @@ export async function createContentGenerator(
         'Ollama URL not provided for self-hosted authentication.',
       );
     }
-    return new OllamaContentGenerator(config.ollamaUrl);
+    return new OllamaContentGenerator(config);
   }
 
   throw new Error(
