@@ -24,6 +24,14 @@ Since I have another system in the home lab, I give it:
 
 Change the address as appropriate. Most single-host users will just want to use `http://127.0.0.1:11434` instead.
 
+This is still a work in progress, so you will likely need to clone and use 
+
+```
+OLLAMA_URL="http://192.168.0.31:11434" npm run start -- --authType self-hosted --model "qwen3:latest"
+```
+
+Some more feature work needs to be done to ensure the UI for context left, token usage and such work. Likewise, the initial auth/startup screen needs a "self-hosted" option so users can forego command line options and just configure the application when starting it.
+
 Original Gemini `README.md` follows:
 
 # Gemini CLI
