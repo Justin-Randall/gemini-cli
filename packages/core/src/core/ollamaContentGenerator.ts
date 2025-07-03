@@ -6,15 +6,37 @@
 
 import {
   CountTokensResponse,
+  FunctionCall,
+  FunctionDeclaration,
   GenerateContentResponse,
   GenerateContentParameters,
   CountTokensParameters,
   EmbedContentResponse,
   EmbedContentParameters,
   Content,
+  Schema,
+  ToolUnion,
 } from '@google/genai';
 import { ContentGenerator } from './contentGenerator.js';
 import { ContentGeneratorConfig } from './contentGenerator.js';
+
+interface OllamaTool {
+  type: 'function';
+  function: {
+    name: string;
+    description: string;
+    parameters: Schema;
+  };
+}
+
+interface OllamaToolCallFunction {
+  name: string;
+  arguments: Record<string, unknown>;
+}
+
+interface OllamaToolCall {
+  function: OllamaToolCallFunction;
+}
 
 interface OllamaMessage {
   role: string;
@@ -25,20 +47,14 @@ interface OllamaMessageResponse {
   role: string;
   content: string;
   thinking?: string; // Optional field for thinking messages
-  tool_calls?: Array<{
-    id: string;
-    type: string;
-    function: {
-      name: string;
-      arguments: string;
-    };
-  }>;
+  tool_calls?: OllamaToolCall[]; // Optional field for tool calls
 }
 interface OllamaChatRequest {
   model: string;
   messages: OllamaMessage[];
   stream: boolean;
   think: boolean;
+  tools?: OllamaTool[];
 }
 
 interface OllamaChatResponse {
@@ -120,7 +136,7 @@ interface OllamaModel {
 }
 
 export class OllamaContentGenerator implements ContentGenerator {
-  constructor(private contentGeneratorConfig: ContentGeneratorConfig) {}
+  constructor(private contentGeneratorConfig: ContentGeneratorConfig) { }
 
   // when selecting a model, if it is not mapped, request
   // model information from the Ollama api endpoint.
@@ -267,6 +283,34 @@ export class OllamaContentGenerator implements ContentGenerator {
       throw new Error(`Model not found: ${model}`);
     }
 
+    // collect tools from request.config.tools?
+    let ollamaTools: OllamaTool[] | undefined;
+    if (ollamaModel.ollamaFullModelInfo.capabilities.includes('tools')) {
+      const rawTools = request.config?.tools ?? ([] as ToolUnion[]);
+
+      const fnDecls = rawTools
+        .flatMap((t): FunctionDeclaration[] =>
+          'functionDeclarations' in t && Array.isArray(t.functionDeclarations)
+            ? t.functionDeclarations
+            : [],
+        )
+        .filter(
+          (
+            fn,
+          ): fn is FunctionDeclaration & { name: string; parameters: Schema } =>
+            typeof fn.name === 'string' && typeof fn.parameters === 'object',
+        );
+
+      ollamaTools = fnDecls.map((fn) => ({
+        type: 'function' as const,
+        function: {
+          name: fn.name,
+          description: fn.description ?? '',
+          parameters: fn.parameters,
+        },
+      }));
+    }
+
     // build messages array from request contents
     // we are going to start using the "chat" endppoint, so we aren't going to use the "prompt" field
     // instead, we will use the "messages" field
@@ -278,6 +322,18 @@ export class OllamaContentGenerator implements ContentGenerator {
             messages.push({
               role: content.role || 'user',
               content: part.text,
+            });
+          }
+          if ('functionResponse' in part && part.functionResponse) {
+            // handle function response
+            const fnResponse = part.functionResponse;
+            messages.push({
+              role: 'tool',
+              content: JSON.stringify({
+                id: fnResponse.id,
+                name: fnResponse.name,
+                response: fnResponse.response,
+              }),
             });
           }
         }
@@ -293,6 +349,7 @@ export class OllamaContentGenerator implements ContentGenerator {
       messages,
       stream: true,
       think: ollamaModel.ollamaFullModelInfo.capabilities.includes('thinking'),
+      ...(ollamaTools ? { tools: ollamaTools } : {}),
     };
     const requestBodyJson = JSON.stringify(requestBody);
 
@@ -351,7 +408,7 @@ export class OllamaContentGenerator implements ContentGenerator {
         }
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+        buffer = lines.pop() || ''; // only works when streaming....
 
         for (const line of lines) {
           if (line.trim() === '') continue;
@@ -359,11 +416,18 @@ export class OllamaContentGenerator implements ContentGenerator {
 
           // get the OllamaMessage from the parsed response
           const ollamaChatResponse: OllamaChatResponse = JSON.parse(line);
-          // const generatedText = ollamaChatResponse.message.content;
           const content = ollamaChatResponse.message.content ?? '';
           const thinking = ollamaChatResponse.message.thinking ?? '';
           const isThinking = thinking.length > 0 && content.length === 0;
           const messageText = isThinking ? thinking : content;
+
+          // is there a tool_calls array in the response?
+          const toolCalls = ollamaChatResponse.message.tool_calls ?? [];
+          const functionCalls: FunctionCall[] = toolCalls.map((toolCall) => ({
+            id: toolCall.function.name, // using function name as ID
+            name: toolCall.function.name,
+            args: toolCall.function.arguments,
+          }));
 
           yield {
             candidates: [
@@ -375,7 +439,7 @@ export class OllamaContentGenerator implements ContentGenerator {
               },
             ],
             text: messageText,
-            functionCalls: [],
+            functionCalls,
             executableCode: '',
             codeExecutionResult: '',
             data: '',
