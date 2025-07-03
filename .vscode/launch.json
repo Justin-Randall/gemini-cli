@@ -16,7 +16,7 @@
         "--auth-type",
         "self-hosted",
         "--model",
-        "qwen3:latest"
+        "qwen3:0.6b"
       ],
       "skipFiles": ["<node_internals>/**"],
       "cwd": "${workspaceFolder}",
