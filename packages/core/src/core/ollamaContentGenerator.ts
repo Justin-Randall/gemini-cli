@@ -136,7 +136,7 @@ interface OllamaModel {
 }
 
 export class OllamaContentGenerator implements ContentGenerator {
-  constructor(private contentGeneratorConfig: ContentGeneratorConfig) { }
+  constructor(private contentGeneratorConfig: ContentGeneratorConfig) {}
 
   // when selecting a model, if it is not mapped, request
   // model information from the Ollama api endpoint.
@@ -401,6 +401,7 @@ export class OllamaContentGenerator implements ContentGenerator {
       }
       let buffer = '';
       let finished = false;
+      let hasYieldedThought = false;
       while (!finished) {
         const { done, value } = await reader.read();
         if (done) {
@@ -412,38 +413,60 @@ export class OllamaContentGenerator implements ContentGenerator {
 
         for (const line of lines) {
           if (line.trim() === '') continue;
-          // const parsed = JSON.parse(line);
 
-          // get the OllamaMessage from the parsed response
           const ollamaChatResponse: OllamaChatResponse = JSON.parse(line);
           const content = ollamaChatResponse.message.content ?? '';
           const thinking = ollamaChatResponse.message.thinking ?? '';
           const isThinking = thinking.length > 0 && content.length === 0;
-          const messageText = isThinking ? thinking : content;
 
-          // is there a tool_calls array in the response?
-          const toolCalls = ollamaChatResponse.message.tool_calls ?? [];
-          const functionCalls: FunctionCall[] = toolCalls.map((toolCall) => ({
-            id: toolCall.function.name, // using function name as ID
-            name: toolCall.function.name,
-            args: toolCall.function.arguments,
-          }));
+          if (isThinking) {
+            if (!hasYieldedThought) {
+              const messageText = `**${thinking}**`;
+              yield {
+                candidates: [
+                  {
+                    content: {
+                      role: 'model',
+                      parts: [{ text: messageText, thought: true }],
+                    },
+                  },
+                ],
+                text: messageText,
+                functionCalls: [],
+                executableCode: '',
+                codeExecutionResult: '',
+                data: '',
+              };
+              hasYieldedThought = true;
+            }
+            // we will ignore subsequent thinking chunks
+          } else {
+            // any content message resets the thought flag
+            hasYieldedThought = false;
 
-          yield {
-            candidates: [
-              {
-                content: {
-                  role: 'model', // MUST be model, see geminiChat.ts validateHistory()
-                  parts: [{ text: messageText, thought: isThinking }],
+            const toolCalls = ollamaChatResponse.message.tool_calls ?? [];
+            const functionCalls: FunctionCall[] = toolCalls.map((toolCall) => ({
+              id: toolCall.function.name, // using function name as ID
+              name: toolCall.function.name,
+              args: toolCall.function.arguments,
+            }));
+
+            yield {
+              candidates: [
+                {
+                  content: {
+                    role: 'model', // MUST be model, see geminiChat.ts validateHistory()
+                    parts: [{ text: content, thought: false }],
+                  },
                 },
-              },
-            ],
-            text: messageText,
-            functionCalls,
-            executableCode: '',
-            codeExecutionResult: '',
-            data: '',
-          };
+              ],
+              text: content,
+              functionCalls,
+              executableCode: '',
+              codeExecutionResult: '',
+              data: '',
+            };
+          }
 
           if (ollamaChatResponse.done) {
             finished = true;
