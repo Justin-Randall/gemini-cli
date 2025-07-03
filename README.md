@@ -1,3 +1,31 @@
+# This is a fork of [Gemini CLI](https://github.com/google-gemini/gemini-cli)
+
+It was forked to add support for self-hosted AI. The first implementation is to use [Ollama](https://github.com/ollama/ollama) which is a fine way to run open source models in a home lab or locally.
+
+To bypass Google authentication and use of for-pay Google AI services, use command line options to override Gemini-CLI's authentication, API endpoints and models:
+
+```
+--auth-type self-hosted
+```
+
+This tells Gemini-CLI to use self-hosted Ollama models. In the current version you will also need to add:
+
+```
+--model <model name>
+```
+
+to tell the Gemini which model to you on your Ollama instance.
+
+Lastly, you will need to set an environment variable for the URL to use.
+
+Since I have another system in the home lab, I give it:
+
+`OLLAMA_URL="http://192.168.0.31:11434"`
+
+Change the address as appropriate. Most single-host users will just want to use `http://127.0.0.1:11434` instead.
+
+Original Gemini `README.md` follows:
+
 # Gemini CLI
 
 [![Gemini CLI CI](https://github.com/google-gemini/gemini-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/google-gemini/gemini-cli/actions/workflows/ci.yml)
